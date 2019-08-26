@@ -6,10 +6,10 @@ import xarray as xr, numpy as np#, pandas as pd
 #import matplotlib.pyplot as plt
 from numpy import absolute, exp, log
 
-from shared.entropy_deficit import entropy_deficit
-from shared.potential_intensity import potential_intensity
-from shared.wind_shear import wind_shear
-from shared.absolute_vorticity import absolute_vorticity
+from entropy_deficit import entropy_deficit
+from potential_intensity import potential_intensity
+from wind_shear import wind_shear
+from absolute_vorticity import absolute_vorticity
 
 def do_tci(ifile, odir=None):
     '''calculate TC indices (e.g. GPI, VI) and related variables given FLOR/HiRAM atmos_month output'''
@@ -181,5 +181,5 @@ def do_tci(ifile, odir=None):
     
 if __name__ == '__main__':
     #ifile = '/tigress/wenchang/MODEL_OUT/CTL1860_noleap_tigercpu_intelmpi_18_576PE/POSTP/10000101.atmos_month.nc'
-    ifile = '10000101.atmos_month.nc'
-    do_tci(ifile)
+    ifile = 'example/10000101.atmos_month.nc'
+    do_tci(ifile, odir='example')
