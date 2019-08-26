@@ -1,0 +1,5 @@
+pcmin.f90 is used to calculate the potential intensity (I think it is originally from Kerry Emannual's algorithm).
+It is written in FORTRAN 90 and is compiled by f2py into *.so file that it can be called in python.
+
+    f2py -c pcmin.f90 -m pcmin
+
