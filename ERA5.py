@@ -11,15 +11,54 @@ from potential_intensity import potential_intensity
 from wind_shear import wind_shear
 from absolute_vorticity import absolute_vorticity
 
-def do_tci(ifile, odir=None):
+def do_tci(year, odir=None):
     '''calculate TC indices (e.g. GPI, VI) and related variables given FLOR/HiRAM atmos_month output'''
-    print('[input]:', ifile)
+    print('[year]:', year)
     if odir is None:
         odir = '.'
-    #ifile = '/tigress/wenchang/MODEL_OUT/CTL1860_noleap_tigercpu_intelmpi_18_576PE/POSTP/10000101.atmos_month.nc'
-    ibasename = os.path.basename(ifile)
-    ds = xr.open_dataset(ifile)
-    is_ocean = ds.land_mask.load() < 0.1
+    ibasename = f'era5.monthly.{year}.nc' 
+
+    # sst and ocean mask
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/sea_surface_temperature/era5.sea_surface_temperature.monthly.{year:04d}.nc'
+    sst = xr.open_dataarray(ifile)# units K
+    is_ocean = sst.isel(time=0).drop('time').pipe(lambda x: x*0==0)
+
+    # slp
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/mean_sea_level_pressure/era5.mean_sea_level_pressure.monthly.{year:04d}.nc'
+    slp = xr.open_dataarray(ifile) # units Pa
+    
+    # t2m
+    ifile = f'/tigress/wenchang/data/era5/analysis/2m_temperature/monthly/era5.2m_temperature.monthly.{year:04d}.nc'
+    t2m = xr.open_dataarray(ifile) # units K
+
+    # RH2m
+    ifile = f'/tigress/wenchang/data/era5/analysis/2m_relative_humidity/monthly/era5.2m_relative_humidity.monthly.{year:04d}.nc'
+    RH2m = xr.open_dataarray(ifile) # units %
+    
+    # Ta
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/temperature/era5.temperature.monthly.{year:04d}.nc'
+    Ta = xr.open_dataarray(ifile) # in K
+
+    # RH
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/relative_humidity/era5.relative_humidity.monthly.{year:04d}.nc'
+    RH = xr.open_dataarray(ifile) # in %
+
+    # q
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/specific_humidity/era5.specific_humidity.monthly.{year:04d}.nc'
+    q = xr.open_dataarray(ifile) # in kg/kg
+
+    # u
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/u_component_of_wind/era5.u_component_of_wind.monthly.{year:04d}.nc'
+    u = xr.open_dataarray(ifile) # in m/s
+
+    # v 
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/v_component_of_wind/era5.v_component_of_wind.monthly.{year:04d}.nc'
+    v = xr.open_dataarray(ifile) # in m/s
+
+    # vorticity
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/vorticity/era5.vorticity.monthly.{year:04d}.nc'
+    vort = xr.open_dataarray(ifile) # in s**-1
+
 
     # entropy deficit: (s_m_star - s_m)/(s_sst_star - s_b)
     print('entropy deficit')
@@ -31,13 +70,13 @@ def do_tci(ifile, odir=None):
     else:
         p_m = 600*100 # Pa
         chi = entropy_deficit(
-            sst=ds.t_surf,
-            slp=ds.slp*100,
-            Tb=ds.t_ref,
-            RHb=ds.rh_ref/100,
+            sst=sst,
+            slp=slp,
+            Tb=t2m,
+            RHb=RH2m/100,
             p_m=p_m,
-            Tm=ds.temp.interp(pfull=p_m/100).drop('pfull'),
-            RHm=ds.rh.interp(pfull=p_m/100).drop('pfull')/100
+            Tm=Ta.sel(level=p_m/100).drop('level'),
+            RHm=RH.sel(level=p_m/100).drop('level')/100
             ).where(is_ocean)
         chi.to_dataset(name=dname) \
             .to_netcdf(ofile, 
@@ -52,15 +91,14 @@ def do_tci(ifile, odir=None):
         PI = xr.open_dataset(ofile)
         print('[opened]:', ofile)
     else:
-        truncate_and_reverse_plevels = lambda x: x.sel(pfull=slice(60, None)) \
-            .isel(pfull=slice(-1, None, -1)) # 
+        reverse_plevels = lambda x: x.isel(level=slice(-1, None, -1)) # 
         PI = potential_intensity(
-            sst=ds.t_surf.where(is_ocean),
-            slp=ds.slp.where(is_ocean)*100,
-            p=ds.pfull.pipe(truncate_and_reverse_plevels),
-            T=ds.temp.pipe(truncate_and_reverse_plevels).where(is_ocean),
-            q=ds.sphum.pipe(truncate_and_reverse_plevels).where(is_ocean),
-            dim_x='grid_xt', dim_y='grid_yt', dim_z='pfull'
+            sst=sst,
+            slp=slp.where(is_ocean),
+            p=Ta.level.pipe(reverse_plevels),
+            T=Ta.pipe(reverse_plevels).where(is_ocean),
+            q=q.pipe(reverse_plevels).where(is_ocean),
+            dim_x='longitude', dim_y='latitude', dim_z='level'
             )
         encoding = {dname:{'dtype': 'float32', 'zlib': True, 'complevel': 1} 
             for dname in ('pmin', 'vmax')}
@@ -77,10 +115,10 @@ def do_tci(ifile, odir=None):
         print('[opened]:', ofile)
     else:
         Vshear = wind_shear(
-            u850=ds.ucomp.interp(pfull=850),
-            v850=ds.vcomp.interp(pfull=850),
-            u200=ds.ucomp.interp(pfull=200),
-            v200=ds.vcomp.interp(pfull=200)
+            u850=u.sel(level=850),
+            v850=v.sel(level=850),
+            u200=u.sel(level=200),
+            v200=v.sel(level=200)
             )
         Vshear.to_dataset(name=dname) \
             .to_netcdf(ofile, 
@@ -112,8 +150,8 @@ def do_tci(ifile, odir=None):
         print('[opened]:', ofile)
     else:
         eta = absolute_vorticity(
-            vort850=ds.vort850,
-            lat=ds.grid_yt
+            vort850=vort.sel(level=850),
+            lat=vort.latitude
             )
         eta.to_dataset(name=dname) \
             .to_netcdf(ofile, 
@@ -130,7 +168,7 @@ def do_tci(ifile, odir=None):
         H = xr.open_dataset(ofile)[dname]
         print('[opened]:', ofile)
     else:
-        H = ds.rh.interp(pfull=600).drop('pfull')
+        H = RH.sel(level=600).drop('level')
         H.attrs['long_name'] = '600hPa relative humidity'
         H.attrs['units'] = '%'
         H.to_dataset(name=dname) \
@@ -180,6 +218,8 @@ def do_tci(ifile, odir=None):
         print('[saved]:', ofile)
     
 if __name__ == '__main__':
-    #ifile = '/tigress/wenchang/MODEL_OUT/CTL1860_noleap_tigercpu_intelmpi_18_576PE/POSTP/10000101.atmos_month.nc'
-    ifile = 'example/10000101.atmos_month.nc'
-    do_tci(ifile, odir='example')
+    #year = 1979
+    #do_tci(year, odir='/tigress/wenchang/data/era5/analysis/TCI/')
+    years = range(1979, 2019)
+    for year in years:
+        do_tci(year, odir='/tigress/wenchang/data/era5/analysis/TCI/')
