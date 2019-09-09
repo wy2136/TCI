@@ -36,27 +36,27 @@ def do_tci(year, odir=None):
     RH2m = xr.open_dataarray(ifile) # units %
     
     # Ta
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/temperature/era5.temperature.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/temperature/era5.temperature.monthly.{year:04d}.nc'
     Ta = xr.open_dataarray(ifile) # in K
 
     # RH
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/relative_humidity/era5.relative_humidity.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/relative_humidity/era5.relative_humidity.monthly.{year:04d}.nc'
     RH = xr.open_dataarray(ifile) # in %
 
     # q
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/specific_humidity/era5.specific_humidity.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/specific_humidity/era5.specific_humidity.monthly.{year:04d}.nc'
     q = xr.open_dataarray(ifile) # in kg/kg
 
     # u
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/u_component_of_wind/era5.u_component_of_wind.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/u_component_of_wind/era5.u_component_of_wind.monthly.{year:04d}.nc'
     u = xr.open_dataarray(ifile) # in m/s
 
     # v 
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/v_component_of_wind/era5.v_component_of_wind.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/v_component_of_wind/era5.v_component_of_wind.monthly.{year:04d}.nc'
     v = xr.open_dataarray(ifile) # in m/s
 
     # vorticity
-    ifile = f'/tigress/wenchang/data/era5/raw/monthly/vorticity/era5.vorticity.monthly.{year:04d}.nc'
+    ifile = f'/tigress/wenchang/data/era5/raw/monthly/plevels/vorticity/era5.vorticity.monthly.{year:04d}.nc'
     vort = xr.open_dataarray(ifile) # in s**-1
 
 
